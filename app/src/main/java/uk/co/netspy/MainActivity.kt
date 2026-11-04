@@ -73,7 +73,7 @@ fun NetspyApp() {
         }, bottomBar = {
             NavigationBar(containerColor = Panel) {
                 listOf("Overview", "Devices", "Tools", "Settings").forEachIndexed { index, label ->
-                    val icon = when(index) { 0 -> Icons.Default.Dashboard; 1 -> Icons.Default.Devices; 2 -> Icons.Default.Terminal; else -> Icons.Default.Settings }
+                    val icon = when(index) { 0 -> Icons.Default.Home; 1 -> Icons.Default.PhoneAndroid; 2 -> Icons.Default.Build; else -> Icons.Default.Settings }
                     NavigationBarItem(selected = selectedTab == index, onClick = { selectedTab = index }, icon = { Icon(icon, null) }, label = { Text(label) })
                 }
             }
@@ -148,7 +148,7 @@ private fun OverviewScreen(prefix: String, count: Int, scanning: Boolean, progre
                 Text(status, color = Muted, style = MaterialTheme.typography.bodySmall)
                 if(scanning) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth(), color = Accent)
                 Button(onClick = onScan, enabled = !scanning, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Bg)) {
-                    Icon(Icons.Default.Radar, null); Spacer(Modifier.width(8.dp)); Text(if(scanning) "SCANNING $progress%" else "SCAN MY NETWORK", fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text(if(scanning) "SCANNING $progress%" else "SCAN MY NETWORK", fontWeight = FontWeight.Bold)
                 }
             }
         } }
@@ -198,7 +198,7 @@ private fun ToolsScreen(result: String, onPing: (String) -> Unit, onDns: (String
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("NETWORK TOOLS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         OutlinedTextField(value = target, onValueChange = { target = it }, label = { Text("IP address") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { onPing(target.trim()) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.NetworkPing, null); Spacer(Modifier.width(8.dp)); Text("PING HOST") }
+        Button(onClick = { onPing(target.trim()) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("PING HOST") }
         OutlinedTextField(value = host, onValueChange = { host = it }, label = { Text("Hostname") }, modifier = Modifier.fillMaxWidth())
         OutlinedButton(onClick = { onDns(host.trim()) }, modifier = Modifier.fillMaxWidth()) { Text("DNS LOOKUP") }
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Text(result, modifier = Modifier.padding(16.dp), color = Muted) }
