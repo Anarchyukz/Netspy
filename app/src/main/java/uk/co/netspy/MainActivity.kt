@@ -122,8 +122,10 @@ fun NetspyApp() {
                 text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("IP address: ${device.ip}")
                     Text("Status: Online")
+                    Text("Device type: ${device.deviceType}")
                     Text("Latency: ${device.latencyMs?.let { "$it ms" } ?: "Unknown"}")
                     Text("Open TCP ports: ${device.openPorts.joinToString().ifBlank { "None detected" }}")
+                    if (device.services.isNotEmpty()) Text("Advertised services: " + device.services.joinToString("\n"))
                     Text("MAC: ${device.mac ?: "Unavailable without root/ARP cache"}")
                 } }, confirmButton = { TextButton(onClick = { selectedDevice = null }) { Text("Close") } })
         }
@@ -174,7 +176,7 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
 private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("DISCOVERED DEVICES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("${devices.size} devices found in the latest scan", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text("${devices.size} devices found · enriched by mDNS / SSDP where available", color = Muted, style = MaterialTheme.typography.bodySmall)
         if(devices.isEmpty()) Text("No scan results yet. Run a network scan from Overview.", color = Muted, modifier = Modifier.padding(top=20.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(devices, key = { it.ip }) { device ->
@@ -182,7 +184,11 @@ private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Uni
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Devices, tint = Accent, contentDescription = null)
                         Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) { Text(device.hostname.ifBlank { "Unknown device" }, fontWeight = FontWeight.SemiBold); Text(device.ip, color = Muted, style = MaterialTheme.typography.bodySmall) }
+                        Column(Modifier.weight(1f)) {
+                            Text(device.hostname.ifBlank { "Unknown device" }, fontWeight = FontWeight.SemiBold)
+                            Text(device.deviceType, color = Accent, style = MaterialTheme.typography.labelSmall)
+                            Text(device.ip, color = Muted, style = MaterialTheme.typography.bodySmall)
+                        }
                         Column(horizontalAlignment = Alignment.End) { Text("ONLINE", color = Accent, style = MaterialTheme.typography.labelSmall); Text("${device.openPorts.size} ports", color = Muted, style = MaterialTheme.typography.labelSmall) }
                     }
                 }
