@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Date
 
 private val Bg = Color(0xFF090D16)
@@ -73,8 +74,8 @@ fun NetspyApp() {
             )
         }, bottomBar = {
             NavigationBar(containerColor = Panel) {
-                listOf("Overview", "Devices", "Tools", "Settings").forEachIndexed { index, label ->
-                    val icon = when(index) { 0 -> Icons.Default.Home; 1 -> Icons.Default.PhoneAndroid; 2 -> Icons.Default.Build; else -> Icons.Default.Settings }
+                listOf("Overview", "Devices", "Tools", "Security", "Settings").forEachIndexed { index, label ->
+                    val icon = when(index) { 0 -> Icons.Default.Home; 1 -> Icons.Default.PhoneAndroid; 2 -> Icons.Default.Build; 3 -> Icons.Default.Security; else -> Icons.Default.Settings }
                     NavigationBarItem(selected = selectedTab == index, onClick = { selectedTab = index }, icon = { Icon(icon, null) }, label = { Text(label) })
                 }
             }
