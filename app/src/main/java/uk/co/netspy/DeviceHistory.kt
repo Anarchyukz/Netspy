@@ -19,13 +19,13 @@ object DeviceHistory {
             val first = if (storedFirst == 0L) now else storedFirst
             editor.putLong("first_$key", first)
             editor.putLong("last_$key", now)
-            editor.putString("vendor_$key", device.vendor ?: manufacturerFor(device.mac))
             // Keep the last genuine MAC when Android temporarily hides the neighbour entry.
             val knownMac = device.mac ?: prefs.getString("mac_$key", null)
+            val vendor = device.vendor ?: manufacturerFor(knownMac)
+            editor.putString("vendor_$key", vendor)
             editor.putString("mac_$key", knownMac)
             editor.putString("type_$key", device.deviceType)
             editor.putString("host_$key", device.hostname)
-            val vendor = device.vendor ?: manufacturerFor(device.mac)
             device.copy(
                 mac = device.mac ?: prefs.getString("mac_$key", null),
                 vendor = vendor ?: manufacturerFor(prefs.getString("mac_$key", null)),
