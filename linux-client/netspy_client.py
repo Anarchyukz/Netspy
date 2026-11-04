@@ -17,7 +17,7 @@ from tkinter import ttk, messagebox
 APP_DIR = Path.home() / ".config" / "netspy"
 TOKEN_FILE = APP_DIR / "client-token"
 PORT = 8765
-MAC_RE = re.compile(r"(?i)(?:[0-9a-f]{2}:){5}[0-9a-f]{2}")
+MAC_RE = re.compile(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", re.I)
 lock = threading.RLock()
 devices = []
 last_scan = None
