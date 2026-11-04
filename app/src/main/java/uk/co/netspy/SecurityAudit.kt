@@ -34,16 +34,17 @@ object SecurityAudit {
         if (clean.isBlank() || clean.any { it.isWhitespace() } || clean.contains('@')) return "Enter a hostname only, for example example.com."
         var connection: HttpsURLConnection? = null
         return try {
-            connection = URL("https://" + clean).openConnection() as HttpsURLConnection
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
-            connection.requestMethod = "HEAD"
-            connection.instanceFollowRedirects = true
-            connection.connect()
-            val cert = connection.serverCertificates.firstOrNull() as? java.security.cert.X509Certificate
+            val conn = URL("https://" + clean).openConnection() as HttpsURLConnection
+            connection = conn
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            conn.requestMethod = "HEAD"
+            conn.instanceFollowRedirects = true
+            conn.connect()
+            val cert = conn.serverCertificates.firstOrNull() as? java.security.cert.X509Certificate
             buildString {
                 appendLine("HTTPS inspection: " + clean)
-                appendLine("HTTP response: " + connection.responseCode)
+                appendLine("HTTP response: " + conn.responseCode)
                 if (cert != null) {
                     appendLine("Certificate subject: " + cert.subjectX500Principal.name)
                     appendLine("Issuer: " + cert.issuerX500Principal.name)
@@ -51,7 +52,7 @@ object SecurityAudit {
                     appendLine("Certificate valid now: " + runCatching { cert.checkValidity(); true }.getOrDefault(false))
                 }
                 listOf("Strict-Transport-Security", "Content-Security-Policy", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy").forEach { header ->
-                    appendLine(header + ": " + (connection.getHeaderField(header) ?: "Not present"))
+                    appendLine(header + ": " + (conn.getHeaderField(header) ?: "Not present"))
                 }
                 append("Read-only inspection; missing headers are context-dependent, not automatically vulnerabilities.")
             }
