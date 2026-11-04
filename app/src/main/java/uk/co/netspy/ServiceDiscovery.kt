@@ -4,8 +4,9 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.net.DatagramPacket
@@ -31,10 +32,12 @@ object ServiceDiscovery {
 
     suspend fun discover(context: Context): List<DiscoveredService> = withContext(Dispatchers.IO) {
         val results = ConcurrentHashMap<String, DiscoveredService>()
-        val nsdJob = kotlinx.coroutines.async(Dispatchers.IO) { discoverMdns(context, results) }
-        val ssdpJob = kotlinx.coroutines.async(Dispatchers.IO) { discoverSsdp(context, results) }
-        nsdJob.await()
-        ssdpJob.await()
+        coroutineScope {
+            val nsdJob = async(Dispatchers.IO) { discoverMdns(context, results) }
+            val ssdpJob = async(Dispatchers.IO) { discoverSsdp(context, results) }
+            nsdJob.await()
+            ssdpJob.await()
+        }
         results.values.toList()
     }
 
@@ -44,7 +47,6 @@ object ServiceDiscovery {
     ) {
         val manager = context.applicationContext.getSystemService(Context.NSD_SERVICE) as? NsdManager ?: return
         val listeners = mutableListOf<Pair<String, NsdManager.DiscoveryListener>>()
-        val done = CompletableDeferred<Unit>()
 
         serviceTypes.forEach { type ->
             val listener = object : NsdManager.DiscoveryListener {
