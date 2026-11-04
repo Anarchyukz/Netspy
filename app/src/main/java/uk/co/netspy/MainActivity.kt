@@ -239,3 +239,32 @@ private fun SettingsScreen(rootAvailable: Boolean, rootEnabled: Boolean, onRootC
         Text("Netspy 0.1.0 · Local-first · No ads · No account", color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
+
+
+@Composable
+private fun SecurityScreen(onPortAudit: (String) -> Unit, onWebAudit: (String) -> Unit, result: String) {
+    var target by remember { mutableStateOf("192.168.0.1") }
+    var host by remember { mutableStateOf("example.com") }
+    var authorised by remember { mutableStateOf(false) }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
+        item { Text("SECURITY TOOLKIT", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+        item { Text("Read-only checks for networks and services you own or have permission to test.", color = Muted, style = MaterialTheme.typography.bodySmall) }
+        item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("AUTHORISED TESTING", fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = authorised, onCheckedChange = { authorised = it }); Text("I own this system or have permission to test it.", color = Muted, style = MaterialTheme.typography.bodySmall) }
+        } } }
+        item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("TCP EXPOSURE AUDIT", fontWeight = FontWeight.Bold)
+            OutlinedTextField(value = target, onValueChange = { target = it }, label = { Text("Single IP or hostname") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Button(onClick = { onPortAudit(target.trim()) }, enabled = authorised && target.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("CHECK COMMON PORTS") }
+            Text("Bounded connection checks only; no exploit attempts or password guessing.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        } } }
+        item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("HTTPS CONFIGURATION", fontWeight = FontWeight.Bold)
+            OutlinedTextField(value = host, onValueChange = { host = it }, label = { Text("Hostname") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedButton(onClick = { onWebAudit(host.trim()) }, enabled = authorised && host.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("INSPECT TLS & SECURITY HEADERS") }
+        } } }
+        item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Text(result, modifier = Modifier.padding(16.dp), color = Muted) } }
+        item { Text("Advanced root/Shizuku integrations, traceroute and controlled training-lab modules can follow. Netspy does not attempt exploitation.", color = Muted, style = MaterialTheme.typography.bodySmall) }
+    }
+}
