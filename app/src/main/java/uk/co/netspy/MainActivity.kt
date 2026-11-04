@@ -89,12 +89,12 @@ fun NetspyApp() {
                                 scanning = true; progress = 0; status = "Scanning $prefix.0/24…"
                                 try {
                                     devices = NetworkScanner.scan(context) { done, total -> progress = done * 100 / total }
-                                    if (rootEnabled) {
-                                        val arp = RootTools.readArpTable()
-                                        devices = devices.map { device ->
-                                            val mac = arp[device.ip]
-                                            device.copy(mac = mac, vendor = DeviceHistory.manufacturerFor(mac))
-                                        }
+                                    // Scanning creates neighbour-cache entries; read them in both modes,
+                                    // with extra kernel access when the user has enabled root enrichment.
+                                    val arp = RootTools.readArpTable(useRoot = rootEnabled)
+                                    devices = devices.map { device ->
+                                        val mac = arp[device.ip] ?: device.mac
+                                        device.copy(mac = mac, vendor = DeviceHistory.manufacturerFor(mac) ?: device.vendor)
                                     }
                                     val scanned = DeviceHistory.record(context, devices)
                                     val onlineByIp = scanned.associateBy { it.ip }
@@ -198,7 +198,8 @@ private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Uni
                         Column(Modifier.weight(1f)) {
                             Text(device.hostname.ifBlank { "Unknown device" }, fontWeight = FontWeight.SemiBold)
                             Text("${device.vendor ?: "Manufacturer unknown"} · ${device.deviceType}", color = Accent, style = MaterialTheme.typography.labelSmall)
-                            Text(device.ip + (device.mac?.let { " · $it" } ?: ""), color = Muted, style = MaterialTheme.typography.bodySmall)
+                            Text("IP  ${device.ip}", color = Muted, style = MaterialTheme.typography.bodySmall)
+                            Text("MAC  ${device.mac ?: "Unavailable on this Android/network"}", color = if (device.mac != null) Accent else Muted, style = MaterialTheme.typography.labelSmall)
                             Text("Last seen " + if (device.lastSeenMillis > 0) Date(device.lastSeenMillis).toString() else "just now", color = Muted, style = MaterialTheme.typography.labelSmall)
                         }
                         Column(horizontalAlignment = Alignment.End) { Text(if (device.reachable) "ONLINE" else "OFFLINE", color = if (device.reachable) Accent else Muted, style = MaterialTheme.typography.labelSmall); Text("${device.openPorts.size} ports", color = Muted, style = MaterialTheme.typography.labelSmall) }
