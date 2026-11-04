@@ -37,8 +37,8 @@ class MonitorService : Service() {
                 var previous = prefs.getStringSet("known_devices", emptySet())?.toSet() ?: emptySet()
                 while (isActive) {
                     try {
-                        val current = NetworkScanner.scan(this@MonitorService) { _, _ -> }
-                            .map { it.ip }.toSet()
+                        val scanned = DeviceHistory.record(this@MonitorService, NetworkScanner.scan(this@MonitorService) { _, _ -> })
+                        val current = scanned.map { it.ip }.toSet()
                         val newcomers = current - previous
                         if (previous.isNotEmpty() && newcomers.isNotEmpty()) {
                             val manager = getSystemService(NotificationManager::class.java)
