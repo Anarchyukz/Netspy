@@ -6,6 +6,8 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -144,7 +146,9 @@ object ServiceDiscovery {
                             val usn = headers["usn"].orEmpty()
                             val label = listOf(server, st, usn).filter { it.isNotBlank() }.joinToString(" · ")
                             results["$ip|ssdp|$st"] = DiscoveredService(ip, server.ifBlank { "UPnP device" }, "SSDP: $st", label)
-                        } catch (_: SocketTimeoutException) { break }
+                        } catch (_: SocketTimeoutException) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        }
                     }
                 }
             }
