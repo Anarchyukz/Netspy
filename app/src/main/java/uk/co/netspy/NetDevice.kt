@@ -7,5 +7,7 @@ data class NetDevice(
     val latencyMs: Long? = null,
     val openPorts: List<Int> = emptyList(),
     val mac: String? = null,
-    val vendor: String? = null
+    val vendor: String? = null,
+    val deviceType: String = "Unknown device",
+    val services: List<String> = emptyList()
 )
