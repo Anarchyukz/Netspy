@@ -24,6 +24,20 @@ data class DiscoveredService(
 )
 
 object ServiceDiscovery {
+    fun classify(service: DiscoveredService): String {
+        val signature = (service.name + " " + service.type + " " + service.details).lowercase()
+        return when {
+            "googlecast" in signature || "chromecast" in signature || "cast" in signature -> "Streaming device"
+            "airplay" in signature || "apple" in signature -> "Apple / AirPlay device"
+            "ipp" in signature || "printer" in signature -> "Printer"
+            "smb" in signature || "nas" in signature -> "Network storage"
+            "workstation" in signature || "ssh" in signature -> "Computer / server"
+            "http" in signature || "https" in signature -> "Web-enabled device"
+            "upnp" in signature || "ssdp" in signature -> "UPnP / smart device"
+            else -> "Network device"
+        }
+    }
+
     private val serviceTypes = listOf(
         "_http._tcp.", "_https._tcp.", "_googlecast._tcp.",
         "_airplay._tcp.", "_ipp._tcp.", "_printer._tcp.",
