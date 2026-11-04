@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
 fun NetspyApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
-    var devices by remember { mutableStateOf<List<NetDevice>>(emptyList()) }
+    var devices by remember { mutableStateOf(DeviceHistory.load(context)) }
     var scanning by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
     var status by remember { mutableStateOf("Ready to scan your Wi-Fi network") }
@@ -82,7 +82,7 @@ fun NetspyApp() {
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
                 Spacer(Modifier.height(10.dp))
                 when (selectedTab) {
-                    0 -> OverviewScreen(prefix, devices.size, devices.count { it.isNew }, devices.count { it.vendor.isNullOrBlank() || it.deviceType.equals("Unknown device", true) }, scanning, progress, status, monitoring,
+                    0 -> OverviewScreen(prefix, devices.count { it.reachable }, devices.count { it.reachable && it.isNew }, devices.count { it.reachable && (it.vendor.isNullOrBlank() || it.deviceType.equals("Unknown device", true)) }, scanning, progress, status, monitoring,
                         onScan = {
                             if (!scanning) scope.launch {
                                 scanning = true; progress = 0; status = "Scanning $prefix.0/24…"
@@ -95,8 +95,10 @@ fun NetspyApp() {
                                             device.copy(mac = mac, vendor = DeviceHistory.manufacturerFor(mac))
                                         }
                                     }
-                                    devices = DeviceHistory.record(context, devices)
-                                    status = "Scan complete · ${devices.size} devices found"
+                                    val scanned = DeviceHistory.record(context, devices)
+                                    val onlineByIp = scanned.associateBy { it.ip }
+                                    devices = DeviceHistory.load(context).map { old -> onlineByIp[old.ip] ?: old }
+                                    status = "Scan complete · ${scanned.size} devices found"
                                 } catch (e: Exception) { status = e.message ?: "Scan failed" }
                                 scanning = false
                             }
@@ -126,7 +128,7 @@ fun NetspyApp() {
             AlertDialog(onDismissRequest = { selectedDevice = null }, title = { Text(device.hostname.ifBlank { device.ip }) },
                 text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("IP address: ${device.ip}")
-                    Text("Status: Online")
+                    Text("Status: ${if (device.reachable) "Online" else "Offline"}")
                     Text("Device type: ${device.deviceType}")
                     Text("Manufacturer: ${device.vendor ?: "Unknown"}")
                     Text("Last seen: ${if (device.lastSeenMillis > 0) Date(device.lastSeenMillis).toString() else "Not recorded"}")
@@ -183,7 +185,7 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
 private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("DISCOVERED DEVICES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("${devices.size} devices found · manufacturer, type and history where available", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text("${devices.count { it.reachable }} online · ${devices.size} known devices in history", color = Muted, style = MaterialTheme.typography.bodySmall)
         if(devices.isEmpty()) Text("No scan results yet. Run a network scan from Overview.", color = Muted, modifier = Modifier.padding(top=20.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(devices, key = { it.ip }) { device ->
@@ -197,7 +199,7 @@ private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Uni
                             Text(device.ip + (device.mac?.let { " · $it" } ?: ""), color = Muted, style = MaterialTheme.typography.bodySmall)
                             Text("Last seen " + if (device.lastSeenMillis > 0) Date(device.lastSeenMillis).toString() else "just now", color = Muted, style = MaterialTheme.typography.labelSmall)
                         }
-                        Column(horizontalAlignment = Alignment.End) { Text("ONLINE", color = Accent, style = MaterialTheme.typography.labelSmall); Text("${device.openPorts.size} ports", color = Muted, style = MaterialTheme.typography.labelSmall) }
+                        Column(horizontalAlignment = Alignment.End) { Text(if (device.reachable) "ONLINE" else "OFFLINE", color = if (device.reachable) Accent else Muted, style = MaterialTheme.typography.labelSmall); Text("${device.openPorts.size} ports", color = Muted, style = MaterialTheme.typography.labelSmall) }
                     }
                 }
             }
