@@ -2,7 +2,7 @@
 
 A privacy-first Android LAN discovery and diagnostics app built with Kotlin and Jetpack Compose.
 
-## Included in v0.1.0
+## Included in v0.2.0
 - IPv4 /24 subnet discovery with concurrent host checks
 - Common TCP port probes and reverse-hostname lookup
 - mDNS / DNS-SD discovery for common services (Cast, AirPlay, printers, SMB, SSH and web services)
