@@ -61,7 +61,24 @@ object NetworkScanner {
                 deferred
             }.awaitAll().filterNotNull()
         }
-        found.sortedBy { it.ip.substringAfterLast('.').toIntOrNull() ?: 0 }
+        val inventory = found.associateBy { it.ip }.toMutableMap()
+        // mDNS/DNS-SD and SSDP can reveal devices that ignore ping and expose useful service names.
+        val advertised = ServiceDiscovery.discover(context)
+        advertised.filter { it.ip.startsWith("$prefix.") && it.ip.count { ch -> ch == '.' } == 3 }
+            .forEach { service ->
+                val current = inventory[service.ip] ?: NetDevice(
+                    ip = service.ip,
+                    hostname = service.name,
+                    reachable = true
+                )
+                val serviceLabel = "${service.name} · ${service.type}".trim()
+                inventory[service.ip] = current.copy(
+                    hostname = current.hostname.ifBlank { service.name },
+                    deviceType = ServiceDiscovery.classify(service),
+                    services = (current.services + serviceLabel).distinct()
+                )
+            }
+        inventory.values.sortedBy { it.ip.substringAfterLast('.').toIntOrNull() ?: 0 }
     }
 
     private suspend fun probePorts(ip: String): List<Int> = withContext(Dispatchers.IO) {
