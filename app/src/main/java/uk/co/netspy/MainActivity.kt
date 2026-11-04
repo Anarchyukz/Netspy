@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
+import java.util.Date
 
 private val Bg = Color(0xFF090D16)
 private val Panel = Color(0xFF141C2B)
@@ -81,7 +82,7 @@ fun NetspyApp() {
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
                 Spacer(Modifier.height(10.dp))
                 when (selectedTab) {
-                    0 -> OverviewScreen(prefix, devices.size, scanning, progress, status, monitoring,
+                    0 -> OverviewScreen(prefix, devices.size, devices.count { it.isNew }, devices.count { it.vendor.isNullOrBlank() || it.deviceType.equals("Unknown device", true) }, scanning, progress, status, monitoring,
                         onScan = {
                             if (!scanning) scope.launch {
                                 scanning = true; progress = 0; status = "Scanning $prefix.0/24…"
@@ -89,8 +90,12 @@ fun NetspyApp() {
                                     devices = NetworkScanner.scan(context) { done, total -> progress = done * 100 / total }
                                     if (rootEnabled) {
                                         val arp = RootTools.readArpTable()
-                                        devices = devices.map { it.copy(mac = arp[it.ip]) }
+                                        devices = devices.map { device ->
+                                            val mac = arp[device.ip]
+                                            device.copy(mac = mac, vendor = DeviceHistory.manufacturerFor(mac))
+                                        }
                                     }
+                                    devices = DeviceHistory.record(context, devices)
                                     status = "Scan complete · ${devices.size} devices found"
                                 } catch (e: Exception) { status = e.message ?: "Scan failed" }
                                 scanning = false
@@ -123,6 +128,8 @@ fun NetspyApp() {
                     Text("IP address: ${device.ip}")
                     Text("Status: Online")
                     Text("Device type: ${device.deviceType}")
+                    Text("Manufacturer: ${device.vendor ?: "Unknown"}")
+                    Text("Last seen: ${if (device.lastSeenMillis > 0) Date(device.lastSeenMillis).toString() else "Not recorded"}")
                     Text("Latency: ${device.latencyMs?.let { "$it ms" } ?: "Unknown"}")
                     Text("Open TCP ports: ${device.openPorts.joinToString().ifBlank { "None detected" }}")
                     if (device.services.isNotEmpty()) Text("Advertised services: " + device.services.joinToString("\n"))
@@ -133,16 +140,16 @@ fun NetspyApp() {
 }
 
 @Composable
-private fun OverviewScreen(prefix: String, count: Int, scanning: Boolean, progress: Int, status: String, monitoring: Boolean, onScan: () -> Unit, onMonitor: () -> Unit) {
+private fun OverviewScreen(prefix: String, count: Int, newCount: Int, unknownCount: Int, scanning: Boolean, progress: Int, status: String, monitoring: Boolean, onScan: () -> Unit, onMonitor: () -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column { Text("YOUR NETWORK", color = Muted, style = MaterialTheme.typography.labelMedium); Text(prefix, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
             Surface(color = Accent.copy(alpha=.12f), shape = RoundedCornerShape(20.dp)) { Text(" PRIVATE LAN ", color = Accent, modifier = Modifier.padding(9.dp), style = MaterialTheme.typography.labelSmall) }
         } }
         item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricCard("DEVICES", count.toString(), Modifier.weight(1f))
-            MetricCard("SUBNET", "/24", Modifier.weight(1f))
-            MetricCard("STATUS", if(scanning) "SCAN" else "IDLE", Modifier.weight(1f))
+            MetricCard("CONNECTED", count.toString(), Modifier.weight(1f))
+            MetricCard("NEW", newCount.toString(), Modifier.weight(1f))
+            MetricCard("UNKNOWN", unknownCount.toString(), Modifier.weight(1f))
         } }
         item { Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -176,7 +183,7 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
 private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("DISCOVERED DEVICES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("${devices.size} devices found · enriched by mDNS / SSDP where available", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text("${devices.size} devices found · manufacturer, type and history where available", color = Muted, style = MaterialTheme.typography.bodySmall)
         if(devices.isEmpty()) Text("No scan results yet. Run a network scan from Overview.", color = Muted, modifier = Modifier.padding(top=20.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(devices, key = { it.ip }) { device ->
@@ -186,8 +193,9 @@ private fun DevicesScreen(devices: List<NetDevice>, onSelect: (NetDevice) -> Uni
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(device.hostname.ifBlank { "Unknown device" }, fontWeight = FontWeight.SemiBold)
-                            Text(device.deviceType, color = Accent, style = MaterialTheme.typography.labelSmall)
-                            Text(device.ip, color = Muted, style = MaterialTheme.typography.bodySmall)
+                            Text("${device.vendor ?: "Manufacturer unknown"} · ${device.deviceType}", color = Accent, style = MaterialTheme.typography.labelSmall)
+                            Text(device.ip + (device.mac?.let { " · $it" } ?: ""), color = Muted, style = MaterialTheme.typography.bodySmall)
+                            Text("Last seen " + if (device.lastSeenMillis > 0) Date(device.lastSeenMillis).toString() else "just now", color = Muted, style = MaterialTheme.typography.labelSmall)
                         }
                         Column(horizontalAlignment = Alignment.End) { Text("ONLINE", color = Accent, style = MaterialTheme.typography.labelSmall); Text("${device.openPorts.size} ports", color = Muted, style = MaterialTheme.typography.labelSmall) }
                     }
