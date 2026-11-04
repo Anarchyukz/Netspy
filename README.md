@@ -12,7 +12,7 @@ A privacy-first Android LAN discovery and diagnostics app built with Kotlin and 
 - Dark Material 3 interface; no account, ads or analytics
 
 ## Build
-Open the project in Android Studio or run `./gradlew assembleDebug`.
+Open the project in Android Studio or run `sh ./gradlew assembleDebug` (Windows: `gradlew.bat assembleDebug`).
 APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Permissions and limitations
