@@ -119,6 +119,7 @@ fun NetspyApp() {
                     }, onDns = { host ->
                         scope.launch { diagnostic = try { "${host}: " + java.net.InetAddress.getAllByName(host).joinToString { it.hostAddress ?: "" } } catch(e: Exception) { e.message ?: "DNS lookup failed" } }
                     })
+                    3 -> SecurityScreen(onPortAudit = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.checkPorts(ip) } } }, onWebAudit = { host -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.inspectHttps(host) } } }, result = diagnostic)
                     else -> SettingsScreen(rootAvailable, rootEnabled, onRootCheck = {
                         scope.launch { rootAvailable = RootTools.isRootAvailable(); status = if(rootAvailable) "Root access available" else "Root access not detected" }
                     }, onRootToggle = { rootEnabled = it })
