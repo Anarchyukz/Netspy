@@ -131,7 +131,7 @@ fun NetspyApp() {
                     Text("Status: ${if (device.reachable) "Online" else "Offline"}")
                     Text("Device type: ${device.deviceType}")
                     Text("Manufacturer: ${device.vendor ?: "Unknown"}")
-                    Text("Last seen: ${if (device.lastSeenMillis > 0) Date(device.lastSeenMillis).toString() else "Not recorded"}")
+                    Text("Last seen: ${if (device.lastSeenMillis > 0) android.text.format.DateFormat.format("dd MMM, HH:mm", Date(device.lastSeenMillis)).toString() else "Not recorded"}")
                     Text("Latency: ${device.latencyMs?.let { "$it ms" } ?: "Unknown"}")
                     Text("Open TCP ports: ${device.openPorts.joinToString().ifBlank { "None detected" }}")
                     if (device.services.isNotEmpty()) Text("Advertised services: " + device.services.joinToString("\n"))
