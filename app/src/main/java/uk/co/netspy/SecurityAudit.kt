@@ -29,6 +29,39 @@ object SecurityAudit {
         }
     }
 
+    /** Reads protocol greeting banners from a single authorised host. */
+    fun fingerprintServices(target: String): String {
+        if (target.isBlank() || target.any { it.isWhitespace() } || target.contains('/') || target.contains('@')) return "Enter one IP address or hostname."
+        val services = listOf(21 to "FTP", 22 to "SSH", 23 to "Telnet", 25 to "SMTP", 110 to "POP3", 143 to "IMAP", 80 to "HTTP", 8080 to "HTTP-alt")
+        val findings = mutableListOf<String>()
+        services.forEach { (port, label) ->
+            try {
+                Socket().use { socket ->
+                    socket.connect(InetSocketAddress(target, port), 500)
+                    socket.soTimeout = 900
+                    val banner = runCatching {
+                        if (port == 80 || port == 8080) {
+                            socket.getOutputStream().write("HEAD / HTTP/1.0\\r\\nHost: $target\\r\\nConnection: close\\r\\n\\r\\n".toByteArray())
+                            socket.getOutputStream().flush()
+                        }
+                        val bytes = ByteArray(512)
+                        val count = socket.getInputStream().read(bytes)
+                        if (count > 0) String(bytes, 0, count).replace(Regex("[\\r\\n\\t]+"), " ").trim() else ""
+                    }.getOrDefault("")
+                    findings += "$port/$label" + if (banner.isNotBlank()) " · $banner" else " · connected; no banner"
+                }
+            } catch (_: Exception) { }
+        }
+        return buildString {
+            appendLine("Service fingerprint: $target")
+            if (findings.isEmpty()) appendLine("No recognised services responded on the selected ports.")
+            else findings.forEach { appendLine(it.take(220)) }
+            appendLine()
+            appendLine("Review: Telnet (23) and clear-text FTP (21) expose credentials or data without encryption.")
+            append("Banners can be hidden or misleading; version strings alone do not establish a known vulnerability.")
+        }
+    }
+
     fun inspectHttps(host: String): String {
         val clean = host.trim().removePrefix("https://").substringBefore('/').substringBefore(':')
         if (clean.isBlank() || clean.any { it.isWhitespace() } || clean.contains('@')) return "Enter a hostname only, for example example.com."
