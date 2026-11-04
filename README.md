@@ -5,6 +5,9 @@ A privacy-first Android LAN discovery and diagnostics app built with Kotlin and 
 ## Included in v0.1.0
 - IPv4 /24 subnet discovery with concurrent host checks
 - Common TCP port probes and reverse-hostname lookup
+- mDNS / DNS-SD discovery for common services (Cast, AirPlay, printers, SMB, SSH and web services)
+- SSDP / UPnP discovery with advertised device and server details
+- Best-effort device classification based on advertised service fingerprints
 - Device inventory with IP, response time, discovered ports and device detail view
 - Ping and DNS lookup tools
 - Optional root-assisted ARP table enrichment when `su` is available and approved
@@ -14,6 +17,9 @@ A privacy-first Android LAN discovery and diagnostics app built with Kotlin and 
 ## Build
 Open the project in Android Studio or run `sh ./gradlew assembleDebug` (Windows: `gradlew.bat assembleDebug`).
 APK output: `app/build/outputs/apk/debug/app-debug.apk`.
+
+## Service discovery and identification
+mDNS/DNS-SD and SSDP run alongside the IPv4 scan and can add devices that do not answer ping or the common TCP probes. Android NSD is used for local service advertisements; SSDP sends a standard UPnP M-SEARCH request. Device labels are heuristic hints from advertised service names and headers, not guaranteed hardware identities. Some routers isolate wireless clients or filter multicast, in which case these discoveries may return little or no data.
 
 ## Permissions and limitations
 Netspy uses Android's network permissions. Android 17 introduces a dedicated local-network runtime permission for apps targeting API 37+, so this release targets API 36 and follows Android's documented compatibility path. VPNs, device policies and OEM restrictions can still affect LAN discovery.
