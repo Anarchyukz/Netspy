@@ -208,7 +208,7 @@ private fun ToolsScreen(result: String, onPing: (String) -> Unit, onDns: (String
         OutlinedTextField(value = host, onValueChange = { host = it }, label = { Text("Hostname") }, modifier = Modifier.fillMaxWidth())
         OutlinedButton(onClick = { onDns(host.trim()) }, modifier = Modifier.fillMaxWidth()) { Text("DNS LOOKUP") }
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Text(result, modifier = Modifier.padding(16.dp), color = Muted) }
-        Text("Traceroute and service fingerprinting are planned for a later release.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text("Traceroute is planned for a later release. Service identification is collected during network scans.", color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
 
