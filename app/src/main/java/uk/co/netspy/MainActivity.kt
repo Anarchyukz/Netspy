@@ -119,7 +119,7 @@ fun NetspyApp() {
                     }, onDns = { host ->
                         scope.launch { diagnostic = try { "${host}: " + java.net.InetAddress.getAllByName(host).joinToString { it.hostAddress ?: "" } } catch(e: Exception) { e.message ?: "DNS lookup failed" } }
                     })
-                    3 -> SecurityScreen(onPortAudit = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.checkPorts(ip) } } }, onWebAudit = { host -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.inspectHttps(host) } } }, result = diagnostic)
+                    3 -> SecurityScreen(onPortAudit = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.checkPorts(ip) } } }, onFingerprint = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.fingerprintServices(ip) } } }, onWebAudit = { host -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.inspectHttps(host) } } }, result = diagnostic)
                     else -> SettingsScreen(rootAvailable, rootEnabled, onRootCheck = {
                         scope.launch { rootAvailable = RootTools.isRootAvailable(); status = if(rootAvailable) "Root access available" else "Root access not detected" }
                     }, onRootToggle = { rootEnabled = it })
@@ -243,7 +243,7 @@ private fun SettingsScreen(rootAvailable: Boolean, rootEnabled: Boolean, onRootC
 
 
 @Composable
-private fun SecurityScreen(onPortAudit: (String) -> Unit, onWebAudit: (String) -> Unit, result: String) {
+private fun SecurityScreen(onPortAudit: (String) -> Unit, onFingerprint: (String) -> Unit, onWebAudit: (String) -> Unit, result: String) {
     var target by remember { mutableStateOf("192.168.0.1") }
     var host by remember { mutableStateOf("example.com") }
     var authorised by remember { mutableStateOf(false) }
@@ -259,6 +259,11 @@ private fun SecurityScreen(onPortAudit: (String) -> Unit, onWebAudit: (String) -
             OutlinedTextField(value = target, onValueChange = { target = it }, label = { Text("Single IP or hostname") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Button(onClick = { onPortAudit(target.trim()) }, enabled = authorised && target.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("CHECK COMMON PORTS") }
             Text("Bounded connection checks only; no exploit attempts or password guessing.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        } } }
+        item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("SERVICE FINGERPRINTING", fontWeight = FontWeight.Bold)
+            Text("Read service greetings and basic protocol identifiers on one target.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { onFingerprint(target.trim()) }, enabled = authorised && target.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("IDENTIFY SERVICES") }
         } } }
         item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("HTTPS CONFIGURATION", fontWeight = FontWeight.Bold)
