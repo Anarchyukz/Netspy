@@ -18,7 +18,7 @@ APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 ## Permissions and limitations
 Netspy uses Android's network permissions. Android 17 introduces a dedicated local-network runtime permission for apps targeting API 37+, so this release targets API 36 and follows Android's documented compatibility path. VPNs, device policies and OEM restrictions can still affect LAN discovery.
 
-Android does not expose arbitrary device MAC addresses to ordinary apps. MAC details are best-effort and root-assisted ARP enrichment is optional. Root access is never required for ordinary scans. Root commands are attempted only after the user enables the option and approves the superuser prompt.
+Android does not expose arbitrary device MAC addresses to ordinary apps. MAC details are best-effort and root-assisted ARP enrichment is optional. Root access is never required for ordinary scans. Root commands are attempted only after the user enables the option and approves the superuser prompt. The optional privileged path in this initial version uses Android's `su` interface; Shizuku API integration is not included yet.
 
 The monitor runs as a foreground service and performs a /24 scan every 15 minutes while enabled. Android may stop foreground work under battery, policy or service time limits. The first scan seeds the known-device list; subsequent newly seen IP addresses trigger alerts. A changed DHCP lease can look like a new device.
 
