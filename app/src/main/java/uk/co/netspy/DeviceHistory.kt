@@ -19,6 +19,10 @@ object DeviceHistory {
             val first = if (storedFirst == 0L) now else storedFirst
             editor.putLong("first_$key", first)
             editor.putLong("last_$key", now)
+            editor.putString("vendor_$key", device.vendor ?: manufacturerFor(device.mac))
+            editor.putString("mac_$key", device.mac)
+            editor.putString("type_$key", device.deviceType)
+            editor.putString("host_$key", device.hostname)
             val vendor = device.vendor ?: manufacturerFor(device.mac)
             device.copy(
                 vendor = vendor,
@@ -27,8 +31,28 @@ object DeviceHistory {
                 isNew = storedFirst == 0L
             )
         }
+        editor.putStringSet("known_ips", (prefs.getStringSet("known_ips", emptySet()) ?: emptySet()).toMutableSet().apply { addAll(devices.map { it.ip }) })
         editor.apply()
         return enriched
+    }
+
+    fun load(context: Context): List<NetDevice> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return (prefs.getStringSet("known_ips", emptySet()) ?: emptySet()).mapNotNull { ip ->
+            val key = ip.replace('.', '_')
+            val last = prefs.getLong("last_$key", 0L)
+            if (last == 0L) return@mapNotNull null
+            NetDevice(
+                ip = ip,
+                hostname = prefs.getString("host_$key", "") ?: "",
+                reachable = false,
+                mac = prefs.getString("mac_$key", null),
+                vendor = prefs.getString("vendor_$key", null),
+                deviceType = prefs.getString("type_$key", "Unknown device") ?: "Unknown device",
+                firstSeenMillis = prefs.getLong("first_$key", last),
+                lastSeenMillis = last
+            )
+        }.sortedBy { it.ip }
     }
 
     fun manufacturerFor(mac: String?): String? {
