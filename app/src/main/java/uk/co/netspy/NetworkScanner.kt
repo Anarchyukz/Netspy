@@ -9,6 +9,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicInteger
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -33,6 +34,7 @@ object NetworkScanner {
     suspend fun scan(context: Context, onProgress: (Int, Int) -> Unit): List<NetDevice> = withContext(Dispatchers.IO) {
         val prefix = localPrefix(context) ?: throw IllegalStateException("Connect to Wi-Fi before scanning.")
         val semaphore = Semaphore(32)
+        val completed = AtomicInteger(0)
         val found = coroutineScope {
             (1..254).map { host ->
                 async {
@@ -45,7 +47,9 @@ object NetworkScanner {
                             val elapsed = measureTimeMillis { reachable = address.isReachable(650) }
                             if (reachable) latency = elapsed
                         } catch (_: Exception) { }
-                        val ports = if (reachable) probePorts(ip) else emptyList()
+                        // Many phones, printers and IoT devices ignore ICMP. Probe TCP as a second discovery signal.
+                        val ports = probePorts(ip)
+                        reachable = reachable || ports.isNotEmpty()
                         val name = if (reachable) try {
                             InetAddress.getByName(ip).canonicalHostName.takeIf { it != ip } ?: ""
                         } catch (_: Exception) { "" } else ""
@@ -53,7 +57,7 @@ object NetworkScanner {
                     }
                 }
             }.mapIndexed { index, deferred ->
-                deferred.invokeOnCompletion { onProgress(index + 1, 254) }
+                deferred.invokeOnCompletion { onProgress(completed.incrementAndGet(), 254) }
                 deferred
             }.awaitAll().filterNotNull()
         }
