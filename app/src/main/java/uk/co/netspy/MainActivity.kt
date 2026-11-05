@@ -119,7 +119,7 @@ fun NetspyApp() {
                     }, onDns = { host ->
                         scope.launch { diagnostic = try { "${host}: " + java.net.InetAddress.getAllByName(host).joinToString { it.hostAddress ?: "" } } catch(e: Exception) { e.message ?: "DNS lookup failed" } }
                     })
-                    3 -> SecurityScreen(onPortAudit = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.checkPorts(ip) } } }, onFingerprint = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.fingerprintServices(ip) } } }, onWebAudit = { host -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.inspectHttps(host) } } }, result = diagnostic)
+                    3 -> SecurityScreen(onPortAudit = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.checkPorts(ip) } } }, onFingerprint = { ip -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.fingerprintServices(ip) } } }, onWebAudit = { host -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { SecurityAudit.inspectHttps(host) } } }, onWebsiteScan = { url -> scope.launch { diagnostic = withContext(kotlinx.coroutines.Dispatchers.IO) { WebsiteSafetyScanner.scan(url) } } }, result = diagnostic)
                     else -> SettingsScreen(rootAvailable, rootEnabled, onRootCheck = {
                         scope.launch { rootAvailable = RootTools.isRootAvailable(); status = if(rootAvailable) "Root access available" else "Root access not detected" }
                     }, onRootToggle = { rootEnabled = it })
@@ -244,13 +244,22 @@ private fun SettingsScreen(rootAvailable: Boolean, rootEnabled: Boolean, onRootC
 
 
 @Composable
-private fun SecurityScreen(onPortAudit: (String) -> Unit, onFingerprint: (String) -> Unit, onWebAudit: (String) -> Unit, result: String) {
+private fun SecurityScreen(onPortAudit: (String) -> Unit, onFingerprint: (String) -> Unit, onWebAudit: (String) -> Unit, onWebsiteScan: (String) -> Unit, result: String) {
     var target by remember { mutableStateOf("192.168.0.1") }
     var host by remember { mutableStateOf("example.com") }
     var authorised by remember { mutableStateOf(false) }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
         item { Text("SECURITY TOOLKIT", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
         item { Text("Read-only checks for networks and services you own or have permission to test.", color = Muted, style = MaterialTheme.typography.bodySmall) }
+        item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.VerifiedUser, tint = Accent, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("WEBSITE SAFETY SCANNER", fontWeight = FontWeight.Bold) }
+            Text("Check a website for phishing warning signs, suspicious redirects, certificate problems, risky forms and misleading page content.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            OutlinedTextField(value = websiteUrl, onValueChange = { websiteUrl = it }, label = { Text("Website URL") }, placeholder = { Text("https://example.com") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Button(onClick = { onWebsiteScan(websiteUrl.trim()) }, enabled = websiteUrl.trim().isNotBlank() && websiteUrl.trim() != "https://", modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Bg)) {
+                Icon(Icons.Default.Shield, null); Spacer(Modifier.width(8.dp)); Text("CHECK WEBSITE FOR SCAMS", fontWeight = FontWeight.Bold)
+            }
+            Text("Passive checks only. Netspy will not log in, submit forms or download files.", color = Muted, style = MaterialTheme.typography.labelSmall)
+        } } }
         item { Card(colors = CardDefaults.cardColors(containerColor = Panel)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("AUTHORISED TESTING", fontWeight = FontWeight.Bold)
             Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = authorised, onCheckedChange = { authorised = it }); Text("I own this system or have permission to test it.", color = Muted, style = MaterialTheme.typography.bodySmall) }
