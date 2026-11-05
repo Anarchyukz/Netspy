@@ -61,7 +61,7 @@ object WebsiteSafetyScanner {
         var certSummary: String? = null
         var headers = emptyMap<String, String>()
         try {
-            repeat(6) { hop ->
+            for (hop in 0..5) {
                 val conn = URL(current.toString()).openConnection() as HttpsURLConnection
                 connection = conn
                 conn.connectTimeout = 6500
@@ -104,7 +104,18 @@ object WebsiteSafetyScanner {
                     finalUrl = current.toString()
                     val stream = runCatching { conn.inputStream }.getOrNull()
                     if (stream != null) {
-                        pageText = stream.use { input ->\n                            val buffer = ByteArray(8192)\n                            val output = java.io.ByteArrayOutputStream()\n                            var remaining = 262144\n                            while (remaining > 0) {\n                                val count = input.read(buffer, 0, minOf(buffer.size, remaining))\n                                if (count <= 0) break\n                                output.write(buffer, 0, count)\n                                remaining -= count\n                            }\n                            output.toString(Charsets.UTF_8.name())\n                        }
+                        pageText = stream.use { input ->
+                            val buffer = ByteArray(8192)
+                            val output = java.io.ByteArrayOutputStream()
+                            var remaining = 262144
+                            while (remaining > 0) {
+                                val count = input.read(buffer, 0, minOf(buffer.size, remaining))
+                                if (count <= 0) break
+                                output.write(buffer, 0, count)
+                                remaining -= count
+                            }
+                            output.toString(Charsets.UTF_8.name())
+                        }
                     }
                     break
                 }
