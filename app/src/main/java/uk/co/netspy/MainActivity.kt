@@ -247,6 +247,7 @@ private fun SettingsScreen(rootAvailable: Boolean, rootEnabled: Boolean, onRootC
 private fun SecurityScreen(onPortAudit: (String) -> Unit, onFingerprint: (String) -> Unit, onWebAudit: (String) -> Unit, onWebsiteScan: (String) -> Unit, result: String) {
     var target by remember { mutableStateOf("192.168.0.1") }
     var host by remember { mutableStateOf("example.com") }
+    var websiteUrl by remember { mutableStateOf("") }
     var authorised by remember { mutableStateOf(false) }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
         item { Text("SECURITY TOOLKIT", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
