@@ -52,7 +52,7 @@ object WebsiteSafetyScanner {
             return report(host, score, flags, null, null, "Page content was not fetched because the site uses unencrypted HTTP.")
         }
 
-        var current = URI("https", null, host, initial.port, initial.rawPath.ifBlank { "/" }, initial.rawQuery, null)
+        var current = URI("https", null, host, initial.port, initial.path?.ifBlank { "/" } ?: "/", initial.query, null)
         var connection: HttpsURLConnection? = null
         var finalUrl = current.toString()
         var pageText = ""
@@ -71,7 +71,8 @@ object WebsiteSafetyScanner {
                 conn.setRequestProperty("User-Agent", "Netspy-Website-Inspector/1.0")
                 conn.setRequestProperty("Range", "bytes=0-262143")
                 conn.connect()
-                responseCode = conn.responseCode
+                val code = conn.responseCode
+                responseCode = code
                 val cert = conn.serverCertificates.firstOrNull() as? java.security.cert.X509Certificate
                 certSummary = cert?.let {
                     "Certificate issued to: ${it.subjectX500Principal.name}\nCertificate issuer: ${it.issuerX500Principal.name}\nCertificate expires: ${it.notAfter}\nCertificate currently valid: " +
@@ -79,7 +80,7 @@ object WebsiteSafetyScanner {
                 } ?: "Certificate details unavailable"
                 headers = listOf("Strict-Transport-Security", "Content-Security-Policy", "X-Content-Type-Options", "Referrer-Policy").associateWith { conn.getHeaderField(it) ?: "Not present" }
                 val location = conn.getHeaderField("Location")
-                if (responseCode in 300..399 && !location.isNullOrBlank()) {
+                if (code in 300..399 && !location.isNullOrBlank()) {
                     if (hop == 5) flag(10, "The site uses too many redirects.")
                     val next = current.resolve(location)
                     if (next.scheme?.lowercase() != "https") {
@@ -87,7 +88,14 @@ object WebsiteSafetyScanner {
                         finalUrl = next.toString()
                         break
                     }
-                    if (next.host != null && !next.host.equals(host, true)) flag(5, "The site redirects to a different hostname: ${next.host}")
+                    if (next.host != null && !next.host.equals(host, true)) {
+                        flag(5, "The site redirects to a different hostname: ${next.host}")
+                        val redirectAddresses = runCatching { InetAddress.getAllByName(next.host).toList() }.getOrDefault(emptyList())
+                        if (redirectAddresses.isEmpty() || redirectAddresses.any { it.isAnyLocalAddress || it.isLoopbackAddress || it.isLinkLocalAddress || it.isSiteLocalAddress || it.isMulticastAddress }) {
+                            flag(20, "A redirect points to a private, local or unresolvable host; further inspection was stopped.")
+                            break
+                        }
+                    }
                     current = next
                     finalUrl = current.toString()
                     conn.disconnect()
@@ -96,7 +104,7 @@ object WebsiteSafetyScanner {
                     finalUrl = current.toString()
                     val stream = runCatching { conn.inputStream }.getOrNull()
                     if (stream != null) {
-                        pageText = stream.use { it.readNBytes(262144).toString(Charsets.UTF_8) }
+                        pageText = stream.use { input ->\n                            val buffer = ByteArray(8192)\n                            val output = java.io.ByteArrayOutputStream()\n                            var remaining = 262144\n                            while (remaining > 0) {\n                                val count = input.read(buffer, 0, minOf(buffer.size, remaining))\n                                if (count <= 0) break\n                                output.write(buffer, 0, count)\n                                remaining -= count\n                            }\n                            output.toString(Charsets.UTF_8.name())\n                        }
                     }
                     break
                 }
